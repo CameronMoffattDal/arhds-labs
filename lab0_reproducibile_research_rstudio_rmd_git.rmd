@@ -471,9 +471,17 @@ The original Datasaurus is from Alberto Cairo's [blog post](http://www.thefuncti
 
 **Q1.** How many rows and columns does `datasaurus_dozen` contain, and what are the variables?
 
-```{r}
 
+```{r}
+paste0('The number of rows in this dataset are: ', datasaurus_dozen %>% nrow())
+paste0(
+  'The number of columns in this dataset are: ',
+  datasaurus_dozen %>% ncol()
+)
+paste0('The variables are this dataset are: ')
+datasaurus_dozen %>% colnames()
 ```
+
 
 **Q2.** Uncomment and complete the ggplot code to plot `y` vs `x` for the `dino` subset, and compute the Pearson correlation.
 
@@ -481,14 +489,37 @@ The original Datasaurus is from Alberto Cairo's [blog post](http://www.thefuncti
 dino_data <- datasaurus_dozen |>
   filter(dataset == "dino")
 
-#ggplot(dino_data, aes( # complete...
+ggplot(dino_data, aes(x = x, y = y)) +
+  geom_point()
 
-dino_data |> summarise(r = cor(x, y))
+dino_pcor <- dino_data |> summarise(r = cor(x, y))
 ```
 
 **Q3.** Repeat for the `star` dataset. Compare its `r` to that of `dino`.
 
+```{r}
+star_data <- datasaurus_dozen |>
+  filter(dataset == "star")
+
+ggplot(star_data, aes(x = x, y = y)) +
+  geom_point()
+
+star_pcor <- star_data |> summarise(r = cor(x, y))
+```
+
 **Q4.** Repeat for the `circle` dataset. Compare its `r` to that of `dino`.
+
+```{r}
+dino_data <- datasaurus_dozen |>
+  filter(dataset == "circle")
+
+ggplot(dino_data, aes(x = x, y = y)) +
+  geom_point()
+
+dino_data |> summarise(r = cor(x, y))
+```
+#### MAKE Table
+
 
 **Q5.** Complete the following code to visualise all the datasets at once with faceting and calculate the statistics as a single grouped `summarise` command.
 
@@ -507,12 +538,17 @@ datasaurus_dozen |>
   group_by(dataset) |>
   summarise(
     mean_x = mean(x),
-    #... complete this to calculate the mean for y, standard deviation for x and y, and pearson correlation
+    mean_y = mean(y),
+    std_x = sd(x),
+    std_y = sd(y),
+    p_corr = cor(x, y),
     .groups = "drop"
   )
 ```
 
 **Q6.** Write 2–3 sentences in your knitted document on why these summary statistics are nearly identical despite the obvious visual differences, and what this implies for exploratory data analysis on real clinical datasets.
+
+The summary stastics are very similar because the data was designed to have identical mean, std, and even p correlation for each dataset in both the x and y direction. This designed data highlights the challenges with not visulalizing the data, as very divergent data can give similar results. 
 
 # Exercise: Air Quality Data
 
@@ -528,8 +564,30 @@ R ships with `airquality` (daily air-quality measurements, NY 1973). Despite its
 ```{r}
 aq <- as_tibble(airquality)
 
-#...
+aq %>%
+  filter(!is.na(Ozone))
 ```
+
+```{r}  
+aq <- aq %>% mutate(month_name = format(ISOdate(2000, Month, 1), "%B"))
+
+aq %>%
+  group_by(Month) %>%
+  summarise(
+    Ozone_mean = mean(Ozone, na.rm = TRUE),
+    Temp_mean = mean(Temp, rm.na = TRUE),
+    across(everything(), ~ sum(!is.na(.)), .names = "complete_days_{.col}"),
+  )
+```
+
+```{r}
+ggplot(aq, aes(x = Temp, y = Ozone, colour = month_name)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  labs(title = "Ozone compared to Temperature ")
+```
+
+Suggesting that as the tempurature increases the Ozone levels increase. 
 
 # Git workflow for this practical
 
@@ -563,6 +621,7 @@ sessionInfo()
 For each practical you will submit:
 
 1. The **knitted HTML** of your R Markdown notebook to Brightspace. Knit from a *clean session* (Session → Restart R → Knit).
+
 2. A **link to the source `.Rmd` in your Git repository** (public, or shared with `github:fmaguire` / `gitlab.cs.dal.ca:finlaym` if private - see explanation above).
 
 Due **midnight before the next week's practical**.
