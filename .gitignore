@@ -47,3 +47,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+lab1/*_cache/*
+lab1/lab1_medical_databases_files/
+data/cache/physionet_subsample_1.0.0.rds
