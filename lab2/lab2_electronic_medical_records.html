@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Cameron Moffat">
+<meta name="dcterms.date" content="2026-06-05">
+
+<title>Practical 2: Electronic Medical Records and NLP</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="lab2_electronic_medical_records_files/libs/clipboard/clipboard.min.js"></script>
+<script src="lab2_electronic_medical_records_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="lab2_electronic_medical_records_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="lab2_electronic_medical_records_files/libs/quarto-html/popper.min.js"></script>
+<script src="lab2_electronic_medical_records_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="lab2_electronic_medical_records_files/libs/quarto-html/anchor.min.js"></script>
+<link href="lab2_electronic_medical_records_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="lab2_electronic_medical_records_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="lab2_electronic_medical_records_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="lab2_electronic_medical_records_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="lab2_electronic_medical_records_files/libs/bootstrap/bootstrap-138a6193a3bd40baf1e627da441a4734.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Practical 2: Electronic Medical Records and NLP</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Cameron Moffat </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 5, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>If the above code-block errors, install any missing libraries (<code>install.packages(c('LIBRARYNAME1', 'LIBRARYNAME2'))</code>)</p>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>This practical explores natural language processing (NLP) of unstructured clinical free-text from electronic medical records (EMR). You will work through an analysis going from raw text to an unsupervised topic model using the <code>MTSamples</code> medical transcription dataset.</p>
+<p>The analyses you will do mirror some of those taken in the assigned readings and refer back to them for some questions:</p>
+<ul>
+<li><strong>Sun et al.&nbsp;(2024)</strong> (Latent Dirichlet Allocation (LDA)-based topic modelling for clinical social work notes)</li>
+<li><strong>Chung et al.&nbsp;(2024)</strong> (GPT-4 Turbo for classifying perioperative outcomes from pre-operative notes).</li>
+</ul>
+<p><strong>Learning objectives:</strong> by the end of this practical you should understand how to:</p>
+<ul>
+<li>apply regular expressions to search clinical free-text</li>
+<li>tokenise, normalise, stem, and lemmatize medical text</li>
+<li>compute TF-IDF to identify specialty-discriminating terms</li>
+<li>build a document-term matrix and fit an LDA topic model on clinical notes</li>
+<li>compare traditional NLP with LLM-based approaches</li>
+</ul>
+<hr>
+</section>
+<section id="data-loading-and-exploration" class="level2">
+<h2 class="anchored" data-anchor-id="data-loading-and-exploration">Data Loading and Exploration</h2>
+<p>This lab is going to use the <code>MTSamples</code> medical transcription dataset. You can find the original source of this data <a href="https://www.mtsamples.com/">here</a> (ignore any HTTP vs HTTPS related warnings).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>raw_data <span class="ot">&lt;-</span> <span class="fu">dataset_mtsamples</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(raw_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 4,999
+Columns: 6
+$ note_id           &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1…
+$ description       &lt;chr&gt; "A 23-year-old white female presents with complaint …
+$ medical_specialty &lt;chr&gt; "Allergy / Immunology", "Bariatrics", "Bariatrics", …
+$ sample_name       &lt;chr&gt; "Allergic Rhinitis", "Laparoscopic Gastric Bypass Co…
+$ transcription     &lt;chr&gt; "SUBJECTIVE:,  This 23-year-old white female present…
+$ keywords          &lt;chr&gt; "allergy / immunology, allergic rhinitis, allergies,…</code></pre>
+</div>
+</div>
+<p>I’ve not supplied a data dictionary with this dataset. This is a VERY common situation with real EMR data.</p>
+<p><strong>Q1a (2 marks):</strong> Based on the <code>glimpse()</code> output create a simple data dictionary (variable name with a 1-2 sentence explanation of the variable).</p>
+<dl>
+<dt>note_id</dt>
+<dd>
+This is the primary key.
+</dd>
+<dt>description</dt>
+<dd>
+note description.
+</dd>
+<dt>medical_specialty</dt>
+<dd>
+This is the specialty type.
+</dd>
+<dt>transcription</dt>
+<dd>
+This is a transcription of the note.
+</dd>
+<dt>keywords</dt>
+<dd>
+keywords about the note.
+</dd>
+</dl>
+<p><strong>Q1b (2 marks):</strong> What sort of information are you missing about how this dataset was created that could be important to your analyses?</p>
+<p>This appears to be missing details about date, and it also doesn’t state it the notes are from the same individual. Nor does it have outcomes.</p>
+<p><strong>Q1c (2 marks):</strong> How many distinct medical specialties are represented? What are the most common 5? Create a ggplot bar graph showing how many transcripts come from each specialty.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>top_5_specialty <span class="ot">&lt;-</span> raw_data <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count =</span> <span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(<span class="at">order_by =</span> count, <span class="at">n =</span> <span class="dv">5</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>top_5_specialty <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> medical_specialty, <span class="at">y =</span> count, <span class="at">color =</span> medical_specialty)) <span class="sc">+</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/specialty-bar-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>To make patterns slightly easier to interpret for the sake of learning, we will simplify our dataset down to just transcripts from three specialties that have relatively distinct clinical vocabularies: neurological medicine, musculoskeletal/orthopaedic, and diagnostic imaging. In real analyses this is something you would have to infer from the data as part of your exploratory data analysis.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>filtered_data <span class="ot">&lt;-</span> raw_data <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(medical_specialty <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Orthopedic"</span>, <span class="st">"Radiology"</span>, <span class="st">"Neurology"</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(filtered_data, medical_specialty)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  medical_specialty   n
+1         Neurology 223
+2        Orthopedic 355
+3         Radiology 273</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="regular-expressions" class="level2">
+<h2 class="anchored" data-anchor-id="regular-expressions">Regular Expressions</h2>
+<p>Now we are going to learn how to use the <code>stringr</code> library for regular expressions in R. Regular expressions (regex) enable flexible pattern-based searches over text. As discussed in the lecture, they are widely used in NLP (including as part of the framework around LLM systems) for finding measurements, medications, and semi- structured values embedded in free-text.</p>
+<p>Key <code>stringr</code> functions:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>str_detect(x, pat)</code></td>
+<td>Returns <code>TRUE</code>/<code>FALSE</code> per string</td>
+</tr>
+<tr class="even">
+<td><code>str_count(x, pat)</code></td>
+<td>Number of non-overlapping matches</td>
+</tr>
+<tr class="odd">
+<td><code>str_extract(x, pat)</code></td>
+<td>First match</td>
+</tr>
+<tr class="even">
+<td><code>str_extract_all(x, pat)</code></td>
+<td>All matches (returns a list)</td>
+</tr>
+</tbody>
+</table>
+<p>Key regex special characters (in R strings, backslashes must be doubled — e.g., <code>\d</code> is written <code>\\d</code>):</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Meaning</th>
+<th>Example match</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>\\d</code></td>
+<td>Any digit <code>[0-9]</code></td>
+<td><code>"120"</code> in <code>"120 mg"</code></td>
+</tr>
+<tr class="even">
+<td><code>\\D</code></td>
+<td>Any non-digit</td>
+<td><code>"mg"</code> in <code>"120 mg"</code></td>
+</tr>
+<tr class="odd">
+<td><code>\\w</code></td>
+<td>Word character <code>[a-zA-Z0-9_]</code></td>
+<td><code>"bp"</code> in <code>"bp_value"</code></td>
+</tr>
+<tr class="even">
+<td><code>\\W</code></td>
+<td>Non-word character</td>
+<td><code>" "</code> in <code>"120 mg"</code></td>
+</tr>
+<tr class="odd">
+<td><code>\\s</code></td>
+<td>Whitespace (space, tab, newline)</td>
+<td><code>" "</code> in <code>"120 mg"</code></td>
+</tr>
+<tr class="even">
+<td><code>\\S</code></td>
+<td>Non-whitespace</td>
+<td><code>"120"</code> in <code>"120 mg"</code></td>
+</tr>
+<tr class="odd">
+<td><code>\\b</code></td>
+<td>Word boundary</td>
+<td>matches position between <code>"120"</code> and <code>" "</code></td>
+</tr>
+<tr class="even">
+<td><code>.</code></td>
+<td>Any character except newline</td>
+<td><code>"1"</code>, <code>"a"</code>, <code>"/"</code></td>
+</tr>
+<tr class="odd">
+<td><code>^</code></td>
+<td>Start of string</td>
+<td><code>"BP"</code> in <code>"BP: 120/80"</code></td>
+</tr>
+<tr class="even">
+<td><code>$</code></td>
+<td>End of string</td>
+<td><code>"mmHg"</code> at end of <code>"120/80 mmHg"</code></td>
+</tr>
+<tr class="odd">
+<td><code>*</code></td>
+<td>0 or more of preceding</td>
+<td><code>"\\d*"</code> matches <code>""</code> or <code>"123"</code></td>
+</tr>
+<tr class="even">
+<td><code>+</code></td>
+<td>1 or more of preceding</td>
+<td><code>"\\d+"</code> matches <code>"1"</code> or <code>"123"</code></td>
+</tr>
+<tr class="odd">
+<td><code>?</code></td>
+<td>0 or 1 of preceding (optional)</td>
+<td><code>"mmHg?"</code> matches <code>"mmH"</code> or <code>"mmHg"</code></td>
+</tr>
+<tr class="even">
+<td><code>{n}</code></td>
+<td>Exactly <em>n</em> of preceding</td>
+<td><code>"\\d{3}"</code> matches <code>"120"</code></td>
+</tr>
+<tr class="odd">
+<td><code>{n,m}</code></td>
+<td>Between <em>n</em> and <em>m</em> of preceding</td>
+<td><code>"\\d{2,3}"</code> matches <code>"12"</code> or <code>"120"</code></td>
+</tr>
+<tr class="even">
+<td><code>[abc]</code></td>
+<td>Any one character in set</td>
+<td><code>"[aeiou]"</code> matches any vowel</td>
+</tr>
+<tr class="odd">
+<td><code>[^abc]</code></td>
+<td>Any character <em>not</em> in set</td>
+<td><code>"[^0-9]"</code> matches non-digits</td>
+</tr>
+<tr class="even">
+<td><code>(a\|b)</code></td>
+<td>Either <code>a</code> or <code>b</code></td>
+<td><code>"(mg\|mcg)"</code> matches <code>"mg"</code> or <code>"mcg"</code></td>
+</tr>
+<tr class="odd">
+<td><code>( )</code></td>
+<td>Capture group</td>
+<td><code>"(\\d+) mg"</code> captures the number</td>
+</tr>
+<tr class="even">
+<td><code>[:alpha:]</code></td>
+<td>Any letter (POSIX class)</td>
+<td>equivalent to <code>[a-zA-Z]</code></td>
+</tr>
+<tr class="odd">
+<td><code>[:digit:]</code></td>
+<td>Any digit (POSIX class)</td>
+<td>equivalent to <code>\\d</code></td>
+</tr>
+<tr class="even">
+<td><code>[:alnum:]</code></td>
+<td>Any letter or digit</td>
+<td>equivalent to <code>[a-zA-Z0-9]</code></td>
+</tr>
+<tr class="odd">
+<td><code>[:space:]</code></td>
+<td>Any whitespace (POSIX class)</td>
+<td>equivalent to <code>\\s</code></td>
+</tr>
+<tr class="even">
+<td><code>[:punct:]</code></td>
+<td>Any punctuation character</td>
+<td><code>"."</code>, <code>","</code>, <code>"!"</code></td>
+</tr>
+</tbody>
+</table>
+<section id="finding-blood-pressure-measurements" class="level3">
+<h3 class="anchored" data-anchor-id="finding-blood-pressure-measurements">Finding blood pressure measurements</h3>
+<p>Blood pressure is typically recorded as systolic/diastolic (e.g., “120/80” or “130/85 mmHg”). We can therefore look for a pair of 2-3 digit numbers (<code>\\d{2,3}</code>) separated by a <code>/</code> (i.e., <code>\\d{2,3}/\\d{2,3}</code>) optionally followed by a pressure-related <code>mmHg</code> unit (with or without a preceding space <code>\\s*</code>). The special regex characters like <code>\\d</code> and <code>\\s</code> have that extra <code>\</code> so they are “escaped” and not treated as a literal character.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>bp_pattern <span class="ot">&lt;-</span> <span class="st">"</span><span class="sc">\\</span><span class="st">d{2,3}/</span><span class="sc">\\</span><span class="st">d{2,3}(</span><span class="sc">\\</span><span class="st">s*mmHg)?"</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">has_bp =</span> <span class="fu">str_detect</span>(transcription, bp_pattern)) <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(medical_specialty, has_bp) <span class="sc">|&gt;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> has_bp, <span class="at">values_from =</span> n, <span class="at">names_prefix =</span> <span class="st">"bp_"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pct_with_bp =</span> <span class="fu">percent</span>(bp_TRUE <span class="sc">/</span> (bp_TRUE <span class="sc">+</span> bp_FALSE), <span class="at">accuracy =</span> <span class="fl">0.1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 4
+  medical_specialty bp_FALSE bp_TRUE pct_with_bp
+  &lt;chr&gt;                &lt;int&gt;   &lt;int&gt; &lt;chr&gt;      
+1 Neurology               92     131 58.7%      
+2 Orthopedic             269      86 24.2%      
+3 Radiology              179      94 34.4%      </code></pre>
+</div>
+</div>
+</section>
+<section id="counting-medication-dosages" class="level3">
+<h3 class="anchored" data-anchor-id="counting-medication-dosages">Counting medication dosages</h3>
+<p>Now let’s look for medication doses. We can make a regex that finds one of the standard dosage units (e.g., <code>mg</code> <code>mcg</code>, <code>ml</code>, <code>mL</code> <code>unit</code>) preceded by some sort of number (<code>\\d+</code>) with or without a decimal point (<code>\\.?\\d*</code>).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>dose_pattern <span class="ot">&lt;-</span> <span class="st">"</span><span class="sc">\\</span><span class="st">d+</span><span class="sc">\\</span><span class="st">.?</span><span class="sc">\\</span><span class="st">d*</span><span class="sc">\\</span><span class="st">s*(mg|mcg|ml|mL|units?)"</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">n_doses =</span> <span class="fu">str_count</span>(transcription, dose_pattern)) <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(n_doses <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_doses =</span> <span class="fu">round</span>(<span class="fu">mean</span>(n_doses), <span class="dv">1</span>),</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_doses =</span> <span class="fu">median</span>(n_doses)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 3
+  medical_specialty mean_doses median_doses
+  &lt;chr&gt;                  &lt;dbl&gt;        &lt;dbl&gt;
+1 Neurology                3.9            3
+2 Orthopedic               2.1            1
+3 Radiology                2.2            1</code></pre>
+</div>
+</div>
+<p><strong>Q2 (3 marks):</strong> Write a regular expression to find temperature measurements in clinical text (e.g., “98.6 F”, “37.2°C”, “temperature of 38.1”, “afebrile”). Report how many notes in each specialty contain at least one temperature mention.</p>
+<p>Regex builders like <a href="https://spannbaueradam.shinyapps.io/r_regex_tester/">this website</a> can make it a lot quicker to iterate and improve your regular expressions!</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>dose_pattern <span class="ot">&lt;-</span> <span class="st">"</span><span class="sc">\\</span><span class="st">d+</span><span class="sc">\\</span><span class="st">.?</span><span class="sc">\\</span><span class="st">d*</span><span class="sc">\\</span><span class="st">s*(mg|mcg|ml|mL|units?)"</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>pattern <span class="ot">&lt;-</span> <span class="st">'|(</span><span class="sc">\\</span><span class="st">d+.</span><span class="sc">\\</span><span class="st">d</span><span class="sc">\\</span><span class="st">s*°*(C|F))|afebrile'</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>group <span class="ot">&lt;-</span> filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">temp_measurements =</span> <span class="fu">str_count</span>(transcription, pattern)) <span class="sc">|&gt;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(temp_measurements <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">number_count_measurements =</span> <span class="fu">sum</span>(temp_measurements))</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>group</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  medical_specialty number_count_measurements
+  &lt;chr&gt;                                 &lt;int&gt;
+1 Neurology                            724407
+2 Orthopedic                          1292055
+3 Radiology                            515476</code></pre>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="text-normalisation" class="level2">
+<h2 class="anchored" data-anchor-id="text-normalisation">Text Normalisation</h2>
+<p>A key stage in traditional text analysis is to normalise raw text — reducing variability due to capitalisation, punctuation, and common function words — before any modelling or analysis.</p>
+<section id="tokenisation-and-stop-word-removal" class="level3">
+<h3 class="anchored" data-anchor-id="tokenisation-and-stop-word-removal">Tokenisation and stop word removal</h3>
+<p><code>tidytext::unnest_tokens()</code> splits text into individual tokens and lowercases everything. We then strip residual punctuation, drop very short tokens, and remove stop words (common words like “the”, “of”, “and” that carry little domain information):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>tokenised_data <span class="ot">&lt;-</span> filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_tokens</span>(word, transcription, <span class="at">to_lower =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">word =</span> <span class="fu">str_replace_all</span>(word, <span class="st">"[^[:alpha:]]"</span>, <span class="st">""</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">str_length</span>(word) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(stop_words, <span class="at">by =</span> <span class="st">"word"</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(tokenised_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 197,966
+Columns: 6
+$ note_id           &lt;int&gt; 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, …
+$ description       &lt;chr&gt; "Cerebral Angiogram - moyamoya disease.", "Cerebral …
+$ medical_specialty &lt;chr&gt; "Neurology", "Neurology", "Neurology", "Neurology", …
+$ sample_name       &lt;chr&gt; "Moyamoya Disease", "Moyamoya Disease", "Moyamoya Di…
+$ keywords          &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+$ word              &lt;chr&gt; "cc", "confusion", "slurred", "speech", "hx", "prima…</code></pre>
+</div>
+</div>
+<p><strong>Q3 (2 marks):</strong> How many stop words are in the <code>stop_words</code> list, how many different <code>lexicon</code> are included, and which <code>lexicon</code> contains the most stop words? Answer these questions using code below and create a bargraph of the number of unique stop words per lexicon.</p>
+<p>There are three lexicons included with <code>SMART</code> having the most.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>stop_summary <span class="ot">&lt;-</span> stop_words <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(lexicon) <span class="sc">|&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count =</span> <span class="fu">n_distinct</span>(word))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(stop_summary) <span class="sc">+</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="fu">aes</span>(lexicon, count, <span class="at">fill =</span> lexicon))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/stop-word-lexicons-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Q4 (2 marks):</strong> How many <em>unique</em> unigrams (distinct words) are there in total across all the cleaned and tokenised transcriptions for each specialty? Which specialty has the largest vocabulary and which the smallest? Complete the code below, then provide a 1-2 sentence interpretation of the output.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Uncomment and complete this pipeline-fill in the blank inside n_distinct()</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>tokenised_data <span class="sc">|&gt;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">unique_words =</span> <span class="fu">n_distinct</span>(word))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  medical_specialty unique_words
+  &lt;chr&gt;                    &lt;int&gt;
+1 Neurology                 7515
+2 Orthopedic                7691
+3 Radiology                 5969</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Now calculate the mean number of unique unigrams per </span><span class="al">NOTE</span><span class="do"> for each specialty</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>tokenised_data <span class="sc">|&gt;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty, note_id) <span class="sc">|&gt;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">unique_words =</span> <span class="fu">n_distinct</span>(word), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_unique_words =</span> <span class="fu">mean</span>(unique_words))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  medical_specialty mean_unique_words
+  &lt;chr&gt;                         &lt;dbl&gt;
+1 Neurology                      175.
+2 Orthopedic                     168.
+3 Radiology                      105.</code></pre>
+</div>
+</div>
+</section>
+<section id="bigrams" class="level3">
+<h3 class="anchored" data-anchor-id="bigrams">Bigrams</h3>
+<p>We can also combined consecutive words into two-word phrases (bigrams) which better capture medical compound terms that unigrams split apart (e.g., “blood pressure”, “right knee”, “general anaesthesia”):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>bigrams <span class="ot">&lt;-</span> filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_tokens</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    bigram,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    transcription,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">token =</span> <span class="st">"ngrams"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">n =</span> <span class="dv">2</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">to_lower =</span> <span class="cn">TRUE</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(bigram)) <span class="sc">|&gt;</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">word1 =</span> <span class="fu">word</span>(bigram, <span class="dv">1</span>), <span class="at">word2 =</span> <span class="fu">word</span>(bigram, <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="sc">!</span>word1 <span class="sc">%in%</span> stop_words<span class="sc">$</span>word,</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    <span class="sc">!</span>word2 <span class="sc">%in%</span> stop_words<span class="sc">$</span>word,</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="sc">!</span><span class="fu">str_detect</span>(word1, <span class="st">"</span><span class="sc">\\</span><span class="st">d"</span>),</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    <span class="sc">!</span><span class="fu">str_detect</span>(word2, <span class="st">"</span><span class="sc">\\</span><span class="st">d"</span>)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>word1, <span class="sc">-</span>word2)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> bigrams <span class="sc">|&gt;</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(medical_specialty, bigram, <span class="at">sort =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(n, <span class="at">n =</span> <span class="dv">6</span>, <span class="at">by =</span> medical_specialty, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(medical_specialty)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><strong>Q5 (1 mark):</strong> What is the most common bigram in each specialty?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>b <span class="sc">|&gt;</span> <span class="fu">arrange</span>(<span class="fu">desc</span>(n)) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  medical_specialty                 bigram   n
+1        Orthopedic preoperative diagnosis 141</code></pre>
+</div>
+</div>
+</section>
+<section id="sentence-segmentation" class="level3">
+<h3 class="anchored" data-anchor-id="sentence-segmentation">Sentence segmentation</h3>
+<p>Another common text processing step is to split our text into distinct sentences. Again our old friend <code>unnest_tokens</code> can do a lot of the heavy lifting!</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>sentences_data <span class="ot">&lt;-</span> filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_tokens</span>(sentence, transcription, <span class="at">token =</span> <span class="st">"sentences"</span>, <span class="at">to_lower =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>sentences_data <span class="sc">|&gt;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_sentences =</span> <span class="fu">n</span>(),</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_notes =</span> <span class="fu">n_distinct</span>(note_id),</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_per_note =</span> <span class="fu">round</span>(total_sentences <span class="sc">/</span> n_notes, <span class="dv">1</span>)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 4
+  medical_specialty total_sentences n_notes mean_per_note
+  &lt;chr&gt;                       &lt;int&gt;   &lt;int&gt;         &lt;dbl&gt;
+1 Neurology                    6758     223          30.3
+2 Orthopedic                  11738     355          33.1
+3 Radiology                    4643     273          17  </code></pre>
+</div>
+</div>
+<p><strong>Q6 (1 mark):</strong> How many <em>unique</em> sentences are there in each specialty? Uncomment and complete the code below (replace each <code>___</code> with the correct column name):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>sentences_data <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">distinct_sentences =</span> <span class="fu">n_distinct</span>(sentence))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  medical_specialty distinct_sentences
+  &lt;chr&gt;                          &lt;int&gt;
+1 Neurology                       6647
+2 Orthopedic                     11175
+3 Radiology                       4567</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="stemming-and-lemmatization" class="level2">
+<h2 class="anchored" data-anchor-id="stemming-and-lemmatization">Stemming and Lemmatization</h2>
+<p>However, given how noisy language is and the many variants of the same word (alternative suffixes) like pluralisation or possessive apostrophes. We also often want to “normalise” words to a common base form. There are two main approaches to this:</p>
+<ul>
+<li><p><strong>Stemming</strong>-crude suffix stripping, fast but imprecise: “operating” to “operat” (<code>SnowballC::wordStem</code>)</p></li>
+<li><p><strong>Lemmatization</strong>-linguistically informed root form: “operating” to “operate” (<code>textstem::lemmatize_words</code>)</p>
+<p>We can apply these normalisations using the associated library functions.</p></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>word_sample <span class="ot">&lt;-</span> tokenised_data <span class="sc">|&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(word) <span class="sc">|&gt;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">stem =</span> SnowballC<span class="sc">::</span><span class="fu">wordStem</span>(word, <span class="at">language =</span> <span class="st">"english"</span>),</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">lemma =</span> textstem<span class="sc">::</span><span class="fu">lemmatize_words</span>(word)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>word_sample <span class="sc">|&gt;</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(word <span class="sc">!=</span> stem <span class="sc">|</span> word <span class="sc">!=</span> lemma) <span class="sc">|&gt;</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(word, stem, lemma) <span class="sc">|&gt;</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_head</span>(<span class="at">n =</span> <span class="dv">15</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           word      stem        lemma
+1     confusion    confus    confusion
+2       slurred      slur         slur
+3     primarily primarili    primarily
+4      obtained    obtain       obtain
+5   experienced experienc   experience
+6       illness       ill      illness
+7         weeks      week         week
+8  presentation   present presentation
+9         found     found         find
+10       passed      pass         pass
+11       awoken    awoken        awake
+12     appeared    appear       appear
+13     confused    confus      confuse
+14    lethargic   letharg    lethargic
+15   apparently     appar   apparently</code></pre>
+</div>
+</div>
+<p><strong>Q7 (1 mark):</strong> Does lemmatising or stemming result in fewer unique words?</p>
+<p>stem has fewer, those that seems counter intuitive.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>word_sample <span class="sc">|&gt;</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_stems =</span> <span class="fu">n_distinct</span>(stem),</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_lemmas =</span> <span class="fu">n_distinct</span>(lemma)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  n_stems n_lemmas
+1    8239     9358</code></pre>
+</div>
+</div>
+<p><strong>Q8 (2 marks):</strong> In 2-3 sentences explain why a general-purpose English lemmatizer is likely to perform poorly on medical transcription text. Give at least two examples of medical terms that would likely be handled incorrectly and describe what goes wrong.</p>
+<section id="applying-lemmatisation-to-the-full-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="applying-lemmatisation-to-the-full-dataset">Applying lemmatisation to the full dataset</h3>
+<p>Now let’s lemmatise the full dataset:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>unique_lemmas <span class="ot">&lt;-</span> tokenised_data <span class="sc">|&gt;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(word) <span class="sc">|&gt;</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">lemma =</span> textstem<span class="sc">::</span><span class="fu">lemmatize_words</span>(word))</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>lemmatised_data <span class="ot">&lt;-</span> tokenised_data <span class="sc">|&gt;</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(unique_lemmas, <span class="at">by =</span> <span class="st">"word"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>We can now look more easily at the most frequent (lemmatised) words per specialty</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>lemmatised_data <span class="sc">|&gt;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(medical_specialty, lemma, <span class="at">sort =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(n, <span class="at">n =</span> <span class="dv">8</span>, <span class="at">by =</span> medical_specialty, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    n,</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">reorder_within</span>(lemma, n, medical_specialty),</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> medical_specialty</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">+</span></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>medical_specialty, <span class="at">scales =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_reordered</span>() <span class="sc">+</span></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Most frequent lemmas per specialty"</span>, <span class="at">x =</span> <span class="st">"Count"</span>, <span class="at">y =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/top-lemmas-plot-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="tf-idf-finding-discriminating-terms" class="level2">
+<h2 class="anchored" data-anchor-id="tf-idf-finding-discriminating-terms">TF-IDF: Finding Discriminating Terms</h2>
+<p>Unfortunately, as you can see above, raw counts are dominated by generic medical words (“patient”, “history”, “left”). TF-IDF (term frequency–inverse document frequency) down-weights terms common across all documents and up-weights terms characteristic of a specific category. Sun et al.&nbsp;(2024) used word-frequency analysis as a first step before LDA to explore the vocabulary of their social work notes.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>specialty_tfidf <span class="ot">&lt;-</span> lemmatised_data <span class="sc">|&gt;</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(medical_specialty, lemma) <span class="sc">|&gt;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_tf_idf</span>(lemma, medical_specialty, n)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>specialty_tfidf <span class="sc">|&gt;</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(tf_idf, <span class="at">n =</span> <span class="dv">25</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    tf_idf,</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">reorder_within</span>(lemma, tf_idf, medical_specialty),</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> medical_specialty</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">+</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>medical_specialty, <span class="at">scales =</span> <span class="st">"free"</span>) <span class="sc">+</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_reordered</span>() <span class="sc">+</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Top 25 lemmas by TF-IDF per specialty"</span>, <span class="at">x =</span> <span class="st">"TF-IDF"</span>, <span class="at">y =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/tfidf-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Q9 (2 marks):</strong> Do the top TF-IDF terms make clinical sense for each specialty? Identify one term that surprises you from any specialty. Complete the code below by replacing <code>"your_term_here"</code> with that term to pull an example transcription containing it, then briefly explain its clinical context.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">str_detect</span>(transcription, <span class="st">"your_term_here"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(transcription) <span class="sc">|&gt;</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_trunc</span>(<span class="dv">600</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>character(0)</code></pre>
+</div>
+</div>
+<section id="comparing-lemma-proportions-across-specialties" class="level3">
+<h3 class="anchored" data-anchor-id="comparing-lemma-proportions-across-specialties">Comparing lemma proportions across specialties</h3>
+<p>Now let’s compare across specialties. This plot shows each lemma’s proportion in Orthopedic notes (y-axis) against its proportion in Radiology or Neurology (x-axis, one facet each). Terms near the dashed diagonal are used similarly in both specialties; terms far from it are specialty-specific.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>specialty_props <span class="ot">&lt;-</span> lemmatised_data <span class="sc">|&gt;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(medical_specialty, lemma) <span class="sc">|&gt;</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty) <span class="sc">|&gt;</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">proportion =</span> n <span class="sc">/</span> <span class="fu">sum</span>(n)) <span class="sc">|&gt;</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">id_cols =</span> lemma,</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from =</span> medical_specialty,</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> proportion,</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fill =</span> <span class="dv">0</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(Radiology, Neurology),</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to =</span> <span class="st">"comparison_specialty"</span>,</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_to =</span> <span class="st">"proportion"</span></span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>  specialty_props <span class="sc">|&gt;</span> <span class="fu">filter</span>(proportion <span class="sc">&gt;</span> <span class="dv">0</span>, Orthopedic <span class="sc">&gt;</span> <span class="dv">0</span>),</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(<span class="at">x =</span> proportion, <span class="at">y =</span> Orthopedic, <span class="at">colour =</span> <span class="fu">abs</span>(Orthopedic <span class="sc">-</span> proportion))</span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"grey40"</span>, <span class="at">linetype =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">size =</span> <span class="fl">1.8</span>, <span class="at">width =</span> <span class="fl">0.0003</span>, <span class="at">height =</span> <span class="fl">0.0003</span>) <span class="sc">+</span></span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> lemma), <span class="at">check_overlap =</span> <span class="cn">TRUE</span>, <span class="at">vjust =</span> <span class="fl">1.5</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
+<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_log10</span>(<span class="at">labels =</span> <span class="fu">percent_format</span>(<span class="at">accuracy =</span> <span class="fl">0.001</span>)) <span class="sc">+</span></span>
+<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>(<span class="at">labels =</span> <span class="fu">percent_format</span>(<span class="at">accuracy =</span> <span class="fl">0.001</span>)) <span class="sc">+</span></span>
+<span id="cb35-27"><a href="#cb35-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_gradient</span>(</span>
+<span id="cb35-28"><a href="#cb35-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.003</span>),</span>
+<span id="cb35-29"><a href="#cb35-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">low =</span> <span class="st">"darkslategray4"</span>,</span>
+<span id="cb35-30"><a href="#cb35-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">high =</span> <span class="st">"gray75"</span></span>
+<span id="cb35-31"><a href="#cb35-31" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb35-32"><a href="#cb35-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>comparison_specialty) <span class="sc">+</span></span>
+<span id="cb35-33"><a href="#cb35-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
+<span id="cb35-34"><a href="#cb35-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb35-35"><a href="#cb35-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Orthopedic"</span>,</span>
+<span id="cb35-36"><a href="#cb35-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Comparison specialty"</span>,</span>
+<span id="cb35-37"><a href="#cb35-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Lemma proportions: Orthopedic vs. Radiology and Neurology"</span></span>
+<span id="cb35-38"><a href="#cb35-38" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/proportion-plot-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Q10 (2 marks):</strong> What does this plot tell you about the lexical similarity between Orthopedic and Neurology compared with Orthopedic and Radiology? Is this what you would expect given the clinical roles of each specialty? Justify your answer in 2-4 sentences.</p>
+<hr>
+</section>
+</section>
+<section id="topic-modelling-with-latent-dirichlet-allocation" class="level2">
+<h2 class="anchored" data-anchor-id="topic-modelling-with-latent-dirichlet-allocation">Topic Modelling with Latent Dirichlet Allocation</h2>
+<p>Latent Dirichlet Allocation (LDA) is an unsupervised probabilistic model that treats each document as a mixture of topics and each topic as a probability distribution over words. Unlike supervised classifiers, LDA discovers thematic structure from the text alone-no specialty labels are used during training. This mirrors the approach of Sun et al.&nbsp;(2024), who applied LDA to clinical social work notes to uncover latent SDoH themes without predefined categories.</p>
+<p>Two key outputs of a fitted LDA model:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Output</th>
+<th>Symbol</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Word–topic matrix</td>
+<td>β (beta)</td>
+<td>Probability that word <em>w</em> is generated by topic <em>k</em></td>
+</tr>
+<tr class="even">
+<td>Document–topic matrix</td>
+<td>γ (gamma)</td>
+<td>Proportion of document i.e., transcript <em>d</em> attributed to topic <em>k</em></td>
+</tr>
+</tbody>
+</table>
+<section id="building-the-document-term-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="building-the-document-term-matrix">Building the document-term matrix</h3>
+<p>We aggregate lemma counts per note and apply two filters before building the DTM:</p>
+<ol type="1">
+<li><strong>Minimum document frequency</strong> - drop terms appearing in fewer than 5 notes to reduce sparsity.</li>
+<li><strong>TF-IDF filtering</strong> - drop terms whose mean TF-IDF (computed per note) falls in the bottom quartile. Words that are common across nearly all notes have low IDF and therefore low TF-IDF; retaining them would give LDA noisy, non-discriminative signal.</li>
+</ol>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>term_counts <span class="ot">&lt;-</span> lemmatised_data <span class="sc">|&gt;</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(note_id, lemma)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep only terms present in &gt;= 5 notes</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>doc_freq_filter <span class="ot">&lt;-</span> term_counts <span class="sc">|&gt;</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(note_id, lemma) <span class="sc">|&gt;</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(lemma, <span class="at">name =</span> <span class="st">"doc_count"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(doc_count <span class="sc">&gt;=</span> <span class="dv">5</span>)</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep only terms whose mean per-note TF-IDF is above the 25th percentile</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>tfidf_filter <span class="ot">&lt;-</span> term_counts <span class="sc">|&gt;</span></span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_tf_idf</span>(lemma, note_id, n) <span class="sc">|&gt;</span></span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(lemma) <span class="sc">|&gt;</span></span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_tfidf =</span> <span class="fu">mean</span>(tf_idf), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mean_tfidf <span class="sc">&gt;</span> <span class="fu">quantile</span>(mean_tfidf, <span class="fl">0.25</span>))</span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>emr_dtm <span class="ot">&lt;-</span> term_counts <span class="sc">|&gt;</span></span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(doc_freq_filter, <span class="at">by =</span> <span class="st">"lemma"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">semi_join</span>(tfidf_filter, <span class="at">by =</span> <span class="st">"lemma"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cast_dtm</span>(note_id, lemma, n)</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>emr_dtm <span class="ot">&lt;-</span> emr_dtm[<span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(emr_dtm)) <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"DTM:"</span>, <span class="fu">nrow</span>(emr_dtm), <span class="st">"documents ×"</span>, <span class="fu">ncol</span>(emr_dtm), <span class="st">"terms</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>DTM: 851 documents × 2518 terms</code></pre>
+</div>
+</div>
+</section>
+<section id="fitting-the-lda-model" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-the-lda-model">Fitting the LDA model</h3>
+<p>We fit LDA with <code>k = 3</code> topics-one per specialty-so we can directly compare the discovered topics against the known specialty labels. Again this would likely be something you explore or optimise using more sophisticated hierarchical models.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>k_topics <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>emr_lda <span class="ot">&lt;-</span> topicmodels<span class="sc">::</span><span class="fu">LDA</span>(emr_dtm, <span class="at">k =</span> k_topics, <span class="at">control =</span> <span class="fu">list</span>(<span class="at">seed =</span> <span class="dv">42</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="wordtopic-probabilities-β" class="level3">
+<h3 class="anchored" data-anchor-id="wordtopic-probabilities-β">Word–topic probabilities (β)</h3>
+<p>The β matrix tells us which words are most characteristic of each topic:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>lda_beta <span class="ot">&lt;-</span> <span class="fu">tidy</span>(emr_lda, <span class="at">matrix =</span> <span class="st">"beta"</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>lda_beta <span class="sc">|&gt;</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(topic) <span class="sc">|&gt;</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(beta, <span class="at">n =</span> <span class="dv">12</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(beta, <span class="fu">reorder_within</span>(term, beta, topic), <span class="at">fill =</span> <span class="fu">factor</span>(topic))) <span class="sc">+</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span>topic,</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">scales =</span> <span class="st">"free_y"</span>,</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">labeller =</span> <span class="fu">labeller</span>(<span class="at">topic =</span> <span class="cf">function</span>(x) <span class="fu">paste</span>(<span class="st">"Topic"</span>, x))</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_reordered</span>() <span class="sc">+</span></span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Top 12 words per LDA topic (β probabilities)"</span>,</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"β  (word–topic probability)"</span>,</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="cn">NULL</span></span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/lda-beta-plot-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Q11 (2 marks):</strong> Based on the top words in the β plot, give each topic a brief descriptive clinical label (e.g., “imaging”, “musculoskeletal”, “neurological”). Which topic do you think corresponds most closely to which specialty, and why? Does the vocabulary in each topic match your expectations from the TF-IDF results in Section 6?</p>
+</section>
+<section id="documenttopic-distributions-γ-by-specialty" class="level3">
+<h3 class="anchored" data-anchor-id="documenttopic-distributions-γ-by-specialty">Document–topic distributions (γ) by specialty</h3>
+<p>The γ matrix tells us how much each document (i.e., transcript in this case) draws from each topic. We join it with specialty labels to see whether LDA-discovered topics align with the known clinical categories:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>lda_gamma <span class="ot">&lt;-</span> <span class="fu">tidy</span>(emr_lda, <span class="at">matrix =</span> <span class="st">"gamma"</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>lda_gamma_specialty <span class="ot">&lt;-</span> lda_gamma <span class="sc">|&gt;</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">document =</span> <span class="fu">as.character</span>(note_id)) <span class="sc">|&gt;</span></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(document, medical_specialty),</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"document"</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>lda_gamma_specialty <span class="sc">|&gt;</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(medical_specialty, topic) <span class="sc">|&gt;</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">mean_gamma =</span> <span class="fu">mean</span>(gamma), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">topic =</span> <span class="fu">factor</span>(topic, <span class="at">labels =</span> <span class="fu">paste</span>(<span class="st">"Topic"</span>, <span class="fu">seq_len</span>(k_topics)))) <span class="sc">|&gt;</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(topic, mean_gamma, <span class="at">fill =</span> medical_specialty)) <span class="sc">+</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">"dodge"</span>) <span class="sc">+</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> <span class="fu">percent_format</span>(<span class="at">accuracy =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Mean topic proportion by specialty (γ)"</span>,</span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>,</span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Mean γ"</span>,</span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">"Specialty"</span></span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="lab2_electronic_medical_records_files/figure-html/lda-gamma-plot-1.png" class="img-fluid figure-img" width="864"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Q12 (3 marks):</strong></p>
+<ol type="a">
+<li><p>Based on the γ plot, which specialty has the clearest dominant topic (i.e., one topic has a noticeably higher mean γ than the others for that specialty)? Does this align with the clinical label you assigned to that topic in Q11?</p></li>
+<li><p>Uncomment and complete the code below to compute, for each specialty, the single topic with the highest mean γ. Replace each <code>___</code> with the correct column name or expression.</p></li>
+</ol>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">#lda_gamma_specialty |&gt;</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="co">#  group_by(___, ___) |&gt;</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="co">#  summarise(mean_gamma = mean(gamma), .groups = "drop") |&gt;</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="co">#  group_by(___) |&gt;</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  slice_max(___, n = 1)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ol start="3" type="a">
+<li>Sun et al.&nbsp;(2024) ran LDA on social work notes <em>without knowing in advance</em> what topics would emerge. How does their situation differ from this exercise, where we set <code>k = 3</code> to match three known specialties? What does this suggest about how to choose the number of topics <em>k</em> in a real exploratory analysis?</li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="llms-for-clinical-text-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="llms-for-clinical-text-analysis">LLMs for Clinical Text Analysis</h2>
+<p>Finally, let’s address the LLM in the room. Chung et al.&nbsp;(2024) showed that GPT-4 Turbo, with no task-specific training, could classify perioperative outcomes from pre-operative notes using carefully designed prompts (zero-shot, few-shot, chain-of-thought).</p>
+<p>Let’s experiment similarly to classify a single note and then compare its reasoning with the LDA topic model’s assignment. You can use whichever LLM you are comfortable using (Dalhousie students have access to Microsoft Copilot via Office 365 (copilot.microsoft.com) with some degree of data protection/agreements).</p>
+<section id="sample-note" class="level3">
+<h3 class="anchored" data-anchor-id="sample-note">Sample note</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sample from notes that appear in the topic model</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>dtm_note_ids <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(<span class="fu">rownames</span>(emr_dtm))</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>q10_note <span class="ot">&lt;-</span> filtered_data <span class="sc">|&gt;</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(note_id <span class="sc">%in%</span> dtm_note_ids) <span class="sc">|&gt;</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_sample</span>(<span class="at">n =</span> <span class="dv">1</span>)</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"=== True specialty:"</span>, q10_note<span class="sc">$</span>medical_specialty, <span class="st">"===</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>=== True specialty: Orthopedic ===</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Description:"</span>, q10_note<span class="sc">$</span>description, <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Description: Bunionectomy, right foot with Biopro hemi implant, right first metatarsophalangeal joint.  Arthrodesis, right second, third, and fourth toes with external rod fixation.  Hammertoe repair, right fifth toe.  Extensor tenotomy and capsulotomy, right fourth metatarsophalangeal joint.  Modified Tailor's bunionectomy, right fifth metatarsal.
+ </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"--- Transcription (first 1200 characters) ---</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>--- Transcription (first 1200 characters) ---</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">str_trunc</span>(q10_note<span class="sc">$</span>transcription, <span class="dv">1200</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>PREOPERATIVE DIAGNOSES:,1.  Hallux abductovalgus, right foot.,2.  Hammer toe, right foot, second, third, fourth and fifth toes.,3.  Tailor's bunionette, right foot.,4.  Degenerative joint disease, right first metatarsophalangeal joint.,5.  Rheumatoid arthritis.,6.  Contracted fourth right metatarsophalangeal joint.,POSTOPERATIVE DIAGNOSES:,1.  Hallux abductovalgus, right foot.,2.  Hammer toe, right foot, second, third, fourth and fifth toes.,3.  Tailor's bunionette, right foot.,4.  Degenerative joint disease, right first metatarsophalangeal joint.,5.  Rheumatoid arthritis.,6.  Contracted fourth right metatarsophalangeal joint.,PROCEDURES PERFORMED:,1.  Bunionectomy, right foot with Biopro hemi implant, right first metatarsophalangeal joint.,2.  Arthrodesis, right second, third, and fourth toes with external rod fixation.,3.  Hammertoe repair, right fifth toe.,4.  Extensor tenotomy and capsulotomy, right fourth metatarsophalangeal joint.,5.  Modified Tailor's bunionectomy, right fifth metatarsal.,ANESTHESIA:,  TIVA/local.,HISTORY:,  This 51-year-old female presented to ABCD preoperative holding area after keeping herself NPO since mid night for surgery on her painful right foot b...</code></pre>
+</div>
+</div>
+<p>LDA topic assignment for this note (γ values, highest first):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>lda_gamma_specialty <span class="sc">|&gt;</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(document <span class="sc">==</span> <span class="fu">as.character</span>(q10_note<span class="sc">$</span>note_id)) <span class="sc">|&gt;</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">topic =</span> <span class="fu">paste</span>(<span class="st">"Topic"</span>, topic)) <span class="sc">|&gt;</span></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(gamma))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 4
+  document topic      gamma medical_specialty
+  &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;chr&gt;            
+1 2299     Topic 3 1.000    Orthopedic       
+2 2299     Topic 2 0.000164 Orthopedic       
+3 2299     Topic 1 0.000164 Orthopedic       </code></pre>
+</div>
+</div>
+<p><strong>Q13 (3 marks):</strong> Copy the transcription above into Microsoft Copilot and use the following prompt:</p>
+<blockquote class="blockquote">
+<p><em>“I will give you a medical transcription. Classify it as exactly one of: Orthopedic, Radiology, or Neurology. Think step by step and explain your reasoning before giving your final answer. Transcription: [paste text here]”</em></p>
+</blockquote>
+<ol type="a">
+<li><p>What specialty did the LLM predict, and was it correct? Does it match the topic with the highest γ from the LDA model above?</p></li>
+<li><p>What specific features of the text did the LLM cite to justify its classification?</p></li>
+<li><p>Compare LLM’s explanation-based classification with LDA’s unsupervised topic assignment. Which approach would you prefer for classifying a large batch of new clinical notes, and why?</p></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="tying-back-to-the-literature" class="level2">
+<h2 class="anchored" data-anchor-id="tying-back-to-the-literature">Tying back to the literature</h2>
+<p><strong>Q14 (1 mark):</strong> Sun et al.&nbsp;(2024) applied LDA topic modelling to clinical social work notes to explore SDoH factors. Name two of the SDoH-related topics they identified and state the name of the metric they used to evaluate topic quality (hint: it measures the coherence of the top words within a topic).</p>
+<p><strong>Q15 (1 mark):</strong> Chung et al.&nbsp;(2024) tested GPT-4 Turbo on both classification and numerical prediction tasks. Name one task where the LLM performed well (give the F1 score) and one where it failed to beat a simple baseline (give the MAE and the baseline value for comparison).</p>
+<hr>
+</section>
+<section id="reproducibility" class="level2">
+<h2 class="anchored" data-anchor-id="reproducibility">Reproducibility</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>sessioninfo<span class="sc">::</span><span class="fu">session_info</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>─ Session info ───────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.6.0 (2026-04-24)
+ os       macOS Sequoia 15.5
+ system   aarch64, darwin24.6.0
+ ui       unknown
+ language (EN)
+ collate  en_US.UTF-8
+ ctype    en_US.UTF-8
+ tz       America/Halifax
+ date     2026-06-05
+ pandoc   3.8.3 @ /Applications/Positron.app/Contents/Resources/app/quarto/bin/tools/aarch64/ (via rmarkdown)
+ quarto   1.9.37 @ /Applications/Positron.app/Contents/Resources/app/quarto/bin/quarto
+
+─ Packages ───────────────────────────────────────────────────────────────────
+ package        * version   date (UTC) lib source
+ cli              3.6.6     2026-04-09 [1] CRAN (R 4.6.0)
+ clinspacy      * 1.0.2     2021-03-20 [1] CRAN (R 4.6.0)
+ codetools        0.2-20    2024-03-31 [2] CRAN (R 4.6.0)
+ data.table       1.18.4    2026-05-06 [1] CRAN (R 4.6.0)
+ digest           0.6.39    2025-11-19 [1] CRAN (R 4.6.0)
+ dplyr          * 1.2.1     2026-04-03 [1] CRAN (R 4.6.0)
+ evaluate         1.0.5     2025-08-27 [1] CRAN (R 4.6.0)
+ farver           2.1.2     2024-05-13 [1] CRAN (R 4.6.0)
+ fastmap          1.2.0     2024-05-15 [1] CRAN (R 4.6.0)
+ forcats        * 1.0.1     2025-09-25 [1] CRAN (R 4.6.0)
+ generics         0.1.4     2025-05-09 [1] CRAN (R 4.6.0)
+ ggplot2        * 4.0.3     2026-04-22 [1] CRAN (R 4.6.0)
+ glue             1.8.1     2026-04-17 [1] CRAN (R 4.6.0)
+ gtable           0.3.6     2024-10-25 [1] CRAN (R 4.6.0)
+ here           * 1.0.2     2025-09-15 [1] CRAN (R 4.6.0)
+ hms              1.1.4     2025-10-17 [1] CRAN (R 4.6.0)
+ htmltools        0.5.9     2025-12-04 [1] CRAN (R 4.6.0)
+ htmlwidgets      1.6.4     2023-12-06 [1] CRAN (R 4.6.0)
+ janeaustenr      1.0.0     2022-08-26 [1] CRAN (R 4.6.0)
+ jsonlite         2.0.0     2025-03-27 [1] CRAN (R 4.6.0)
+ knitr            1.51      2025-12-20 [1] CRAN (R 4.6.0)
+ koRpus         * 0.13-9    2026-02-03 [1] CRAN (R 4.6.0)
+ koRpus.lang.en * 0.1-4     2020-10-24 [1] CRAN (R 4.6.0)
+ lattice          0.22-9    2026-02-09 [2] CRAN (R 4.6.0)
+ lifecycle        1.0.5     2026-01-08 [1] CRAN (R 4.6.0)
+ lubridate      * 1.9.5     2026-02-04 [1] CRAN (R 4.6.0)
+ magrittr         2.0.5     2026-04-04 [1] CRAN (R 4.6.0)
+ Matrix           1.7-5     2026-03-21 [2] CRAN (R 4.6.0)
+ modeltools       0.2-24    2025-05-02 [1] CRAN (R 4.6.0)
+ NLP              0.3-2     2024-11-20 [1] CRAN (R 4.6.0)
+ otel             0.2.0     2025-08-29 [1] CRAN (R 4.6.0)
+ pillar           1.11.1    2025-09-17 [1] CRAN (R 4.6.0)
+ pkgconfig        2.0.3     2019-09-22 [1] CRAN (R 4.6.0)
+ plyr             1.8.9     2023-10-02 [1] CRAN (R 4.6.0)
+ purrr          * 1.2.2     2026-04-10 [1] CRAN (R 4.6.0)
+ R6               2.6.1     2025-02-15 [1] CRAN (R 4.6.0)
+ RColorBrewer     1.1-3     2022-04-03 [1] CRAN (R 4.6.0)
+ Rcpp             1.1.1-1.1 2026-04-24 [1] CRAN (R 4.6.0)
+ readr          * 2.2.0     2026-02-19 [1] CRAN (R 4.6.0)
+ reshape2       * 1.4.5     2025-11-12 [1] CRAN (R 4.6.0)
+ rlang            1.2.0     2026-04-06 [1] CRAN (R 4.6.0)
+ rmarkdown        2.31      2026-03-26 [1] CRAN (R 4.6.0)
+ rprojroot        2.1.1     2025-08-26 [1] CRAN (R 4.6.0)
+ S7               0.2.2     2026-04-22 [1] CRAN (R 4.6.0)
+ scales         * 1.4.0     2025-04-24 [1] CRAN (R 4.6.0)
+ sessioninfo    * 1.2.4     2026-06-04 [1] CRAN (R 4.6.0)
+ slam             0.1-55    2024-11-13 [1] CRAN (R 4.6.0)
+ SnowballC      * 0.7.1     2023-04-25 [1] CRAN (R 4.6.0)
+ stringi          1.8.7     2025-03-27 [1] CRAN (R 4.6.0)
+ stringr        * 1.6.0     2025-11-04 [1] CRAN (R 4.6.0)
+ sylly          * 0.1-7     2026-02-02 [1] CRAN (R 4.6.0)
+ sylly.en         0.1-3     2018-03-19 [1] CRAN (R 4.6.0)
+ textstem       * 0.1.4     2018-04-09 [1] CRAN (R 4.6.0)
+ tibble         * 3.3.1     2026-01-11 [1] CRAN (R 4.6.0)
+ tidyr          * 1.3.2     2025-12-19 [1] CRAN (R 4.6.0)
+ tidyselect       1.2.1     2024-03-11 [1] CRAN (R 4.6.0)
+ tidytext       * 0.4.3     2025-07-25 [1] CRAN (R 4.6.0)
+ tidyverse      * 2.0.0     2023-02-22 [1] CRAN (R 4.6.0)
+ timechange       0.4.0     2026-01-29 [1] CRAN (R 4.6.0)
+ tm               0.7-18    2026-02-18 [1] CRAN (R 4.6.0)
+ tokenizers       0.3.0     2022-12-22 [1] CRAN (R 4.6.0)
+ topicmodels    * 0.2-17    2024-08-14 [1] CRAN (R 4.6.0)
+ tzdb             0.5.0     2025-03-15 [1] CRAN (R 4.6.0)
+ utf8             1.2.6     2025-06-08 [1] CRAN (R 4.6.0)
+ vctrs            0.7.3     2026-04-11 [1] CRAN (R 4.6.0)
+ withr            3.0.2     2024-10-28 [1] CRAN (R 4.6.0)
+ xfun             0.57      2026-03-20 [1] CRAN (R 4.6.0)
+ xml2             1.5.2     2026-01-17 [1] CRAN (R 4.6.0)
+ yaml             2.3.12    2025-12-10 [1] CRAN (R 4.6.0)
+
+ [1] /opt/homebrew/lib/R/4.6/site-library
+ [2] /opt/homebrew/Cellar/r/4.6.0/lib/R/library
+ * ── Packages attached to the search path.
+
+──────────────────────────────────────────────────────────────────────────────</code></pre>
+</div>
+</div>
+<hr>
+<p><em>Dataset: MTSamples via <code>clinspacy</code> (mtsamples.com) with material drawn from Silge &amp; Robinson,</em> Text Mining with R <em>(tidytextmining.com)</em></p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
