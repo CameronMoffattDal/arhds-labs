@@ -675,9 +675,10 @@ $ word              &lt;chr&gt; "cc", "confusion", "slurred", "speech", "hx", "p
 1    8239     9358</code></pre>
 </div>
 </div>
-<p><strong>Q8 (2 marks):</strong> In 2-3 sentences explain why a general-purpose English lemmatizer is likely to perform poorly on medical transcription text. Give at least two examples of medical terms that would likely be handled incorrectly and describe what goes wrong.</p>
+<p><strong>Q8 (2 marks):</strong> In 2-3 sentences explain why a general-purpose English</p>
+<p>lemmatizer is likely to perform poorly on medical transcription text. Give at least two examples of medical terms that would likely be handled incorrectly and describe what goes wrong.</p>
 <p>Lemmatizer might perform poorly on medical text because the words are not all english based, so you are using english based reduction techniques on latin words. This may not be practical or accurate.</p>
-<p>I am sure there are better examples, however; an easy choice is the greek or latin suffixes. For exam the following below should tend to have te same lemma, but they do not.</p>
+<p>I am sure there are better examples, however; an easy choice is the greek or latin suffixes. For example the following below should tend to have the same lemma, but they do not.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>word_sample <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_starts</span>(word, <span class="st">"diagnos"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -824,7 +825,7 @@ $ word              &lt;chr&gt; "cc", "confusion", "slurred", "speech", "hx", "p
 </div>
 </div>
 <p><strong>Q10 (2 marks):</strong> What does this plot tell you about the lexical similarity between Orthopedic and Neurology compared with Orthopedic and Radiology? Is this what you would expect given the clinical roles of each specialty? Justify your answer in 2-4 sentences.</p>
-<p>Generally, and unsuprisingly there is a lot of commonality between both specialties. This is likley because a lot of the same terms are used to describe issues across the medical sector. Those above the dotted line are more frequently referenced in Othopedics rathe then the other speciality. Generally, the shape for radiology is more</p>
+<p>Generally, and unsuprisingly there is a lot of commonality between both specialties. This is likley because a lot of the same terms are used to describe issues across the medical sector. Those above the dotted line are more frequently referenced in Othopedics rathe then the other speciality. Generally, the shape for radiology is wider so there are more terms on either side, suggesting less similarity between radiology and Orthopedics.</p>
 </section>
 </section>
 <section id="topic-modelling-with-latent-dirichlet-allocation" class="level2">
