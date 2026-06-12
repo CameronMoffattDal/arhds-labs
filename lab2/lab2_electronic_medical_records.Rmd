@@ -357,7 +357,7 @@ word_sample |>
 
 **Q7 (1 mark):**  Does lemmatising or stemming result in fewer unique words?
 
-stem has fewer, those that seems counter intuitive.
+Stem has fewer results then lemmas. 
 ```{r stemming_v_lemmatising}
 word_sample |>
   summarize(
@@ -371,6 +371,17 @@ word_sample |>
 lemmatizer is likely to perform poorly on medical transcription text. Give at
 least two examples of medical terms that would likely be handled incorrectly
 and describe what goes wrong.
+
+
+Lemmatizer might perform poorly on medical text because the words are not all english based, so you are using english based reduction techniques on latin words. This may not be practical or accurate. 
+
+I am sure there are better examples, however; an easy choice is the greek or latin suffixes. 
+For exam the following below should tend to have te same lemma, but they do not. 
+```{r} 
+word_sample |> filter(str_starts(word, "diagnos"))
+word_sample |> filter(str_starts(word, "dermatol"))
+```
+
 
 
 
@@ -411,6 +422,7 @@ across all documents and up-weights terms characteristic of a specific category.
 Sun et al. (2024) used word-frequency analysis as a first step before LDA to
 explore the vocabulary of their social work notes.
 
+
 ```{r tfidf}
 specialty_tfidf <- lemmatised_data |>
   count(medical_specialty, lemma) |>
@@ -435,9 +447,15 @@ Identify one term that surprises you from any specialty. Complete the code below
 `"your_term_here"` with that term to pull an example transcription containing
 it, then briefly explain its clinical context.
 
+The top lemmas tend to make sense, with neological having more words describing neurological conditions (Temporal, Memory) and similarly for orthopedic and radiology (ligament). 
+
+I was concerned that portal referring to the digital portal used to input the information, as it shows up a lot of orthopedic's top 25 lemmas. However; in a clinical setting it refers to a small entry to an organ- which is apt, but I was unaware. 
+
+
+
 ```{r q9}
 filtered_data |>
-  filter(str_detect(transcription, "your_term_here")) |>
+  filter(str_detect(transcription, "portal")) |>
   slice(1) |>
   pull(transcription) |>
   str_trunc(600)
@@ -496,7 +514,9 @@ between Orthopedic and Neurology compared with Orthopedic and Radiology? Is
 this what you would expect given the clinical roles of each specialty? Justify
 your answer in 2-4 sentences.
 
----
+Generally, and unsuprisingly there is a lot of commonality between both specialties. This is likley because a lot of the same terms are used to describe issues across the medical sector. Those above the dotted line are more frequently referenced in Othopedics rathe then the other speciality. Generally, the shape for radiology is more 
+
+
 
 ## Topic Modelling with Latent Dirichlet Allocation
 
@@ -590,6 +610,10 @@ Which topic do you think corresponds most closely to which specialty, and why?
 Does the vocabulary in each topic match your expectations from the TF-IDF
 results in Section 6?
 
+Generally there does seem to be a topic specific association. For instance, topic 1 describes neurological components (Brain, mass, tumor) that said it is not super explicit. Topic 2 is more skeletal based likely radiology, and the last is musculoskeletal and likely is orthopedic. However; it might be challenging to define with just these words. Since, the topic labels are not completely clear-cut. 
+
+Clinical terminology often overlaps across specialties, making interpretation based solely on the top words somewhat subjective. While each topic appears to have a dominant theme, some terms could reasonably belong to multiple specialties. As a result, the assigned labels should be viewed as general descriptions of topics, rather then mapping to specialities. 
+
 ### Document–topic distributions (γ) by specialty
 
 The γ matrix tells us how much each document (i.e., transcript in this case) draws from each topic. We join it
@@ -630,16 +654,20 @@ lda_gamma_specialty |>
 one topic has a noticeably higher mean γ than the others for that specialty)?
 Does this align with the clinical label you assigned to that topic in Q11?
 
+>Based on the $\gamma$ plot neurology has most dominate contibution in Topic 1. 
+
 (b) Uncomment and complete the code below to compute, for each specialty, the single topic
 with the highest mean γ. Replace each `___` with the correct column name or
 expression.
 
 ```{r q12b}
-#lda_gamma_specialty |>
-#  group_by(___, ___) |>
-#  summarise(mean_gamma = mean(gamma), .groups = "drop") |>
-#  group_by(___) |>
-#  slice_max(___, n = 1)
+library(gt)
+lda_gamma_specialty |>
+  group_by(topic, medical_specialty) |>
+  summarise(mean_gamma = mean(gamma), .groups = "drop") |>
+  group_by(topic) |>
+  slice_max(topic, n = 1) |>
+  gt(groupname_col = '', row_group_as_column = FALSE)
 ```
 
 (c) Sun et al. (2024) ran LDA on social work notes *without knowing in advance*
@@ -647,7 +675,7 @@ what topics would emerge. How does their situation differ from this exercise,
 where we set `k = 3` to match three known specialties? What does this suggest
 about how to choose the number of topics *k* in a real exploratory analysis?
 
----
+> Well, as it was seem this approach was very useful to show the overlap between topics within specailtles. However; if one does not know the specilties or the topics one may want to try multiple k values and see if the is a selection that offers the most divergent groupings. It also suggests one should evaluate your dataset, and there is no set k value required. It depends on the goal of the study for more interitability lower k values might be easier to manage. 
 
 ## LLMs for Clinical Text Analysis
 
@@ -686,7 +714,7 @@ lda_gamma_specialty |>
   arrange(desc(gamma))
 ```
 
-**Q13 (3 marks):** Copy the transcription above into Microsoft Copilot and use
+**Q13 (3 marks):** Copy the transcription above into **GPT-5.3-mini**  and use
 the following prompt:
 
 > *"I will give you a medical transcription. Classify it as exactly one of:
@@ -696,14 +724,19 @@ the following prompt:
 (a) What specialty did the LLM predict, and was it correct? Does it match the
 topic with the highest γ from the LDA model above?
 
+> Classification: Orthopedic
+
+
 (b) What specific features of the text did the LLM cite to justify its
 classification?
+
+> Reasoning: The transcription describes multiple surgical procedures on bones, joints, and tendons of the foot and toes, including bunionectomy, arthrodesis, hammertoe repair, metatarsophalangeal joint reconstruction, and fixation with Kirschner wires. These are all musculoskeletal surgical interventions, which fall under orthopedics rather than radiology (imaging) or neurology (nervous system).
 
 (c) Compare LLM's explanation-based classification with LDA's unsupervised
 topic assignment. Which approach would you prefer for classifying a large batch
 of new clinical notes, and why? 
 
----
+I think this is a challenging question. For me, having proabilties is more useful, as I feel there can be overlap between topics, and a mix of specialties can be used. However; having a single answer makes that easy, and then you can alwas return to the context the LLM outputs. So, ideally you would have both. The probailities, and the context. 
 
 ## Tying back to the literature
 
@@ -713,12 +746,21 @@ SDoH-related topics they identified and state the name of the metric they used
 to evaluate topic quality (hint: it measures the coherence of the top words
 within a topic).
 
+They identifed Mental Health, and Family as large topics in their data set of clinical notes. Using Topic Coherence, and Topic Similarity to evalaute there topics. An ideal word would have high coherence, and low similarity to other topics. 
+
+
+
+
 **Q15 (1 mark):** Chung et al. (2024) tested GPT-4 Turbo on both
 classification and numerical prediction tasks. Name one task where the LLM
 performed well (give the F1 score) and one where it failed to beat a simple
 baseline (give the MAE and the baseline value for comparison).
 
----
+Chung et al found that the binary classifcations performed quite well. With ICU admission performing quite well as a binary predictor - 0.81(95%CI, 0.78-0.83).
+
+The  PACU Phase 1 Duration Zero-shot performed worse then a dummy regressor predicting MAE durations of 49 (95% CI, 46-51 minutes), which is 1.36 times (36% greater error than) the dummy regressor baseline MAE of 36 minutes (95% CI, 34-38 minutes). 
+
+The model did not perform well on numerical tasks. 
 
 ## Reproducibility
 
