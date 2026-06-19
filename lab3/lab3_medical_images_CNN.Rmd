@@ -178,7 +178,7 @@ benefit of being able to flag *referable* DR automatically from a photograph? Wh
 screening tool prefer to err towards over-referral? *(Hint: see the opening paragraphs of
 Gulshan et al.)*
 
-> Diabetic retinopathy is a condition caused by high blood sugar common in diabetes. With >425 Million individuals with diabetes there are too many people to properly assess by certified clinicians. However; if one could use photography assessed by DL the amount of people assess, and referred to clinicians would reduce the amount of strain on those practicing.  
+> Diabetic retinopathy is a condition caused by high blood sugar common in diabetes. With >425 Million individuals with diabetes there are too many people to properly assess by certified clinicians. However; if one could use photography assessed by DL the amount of people assessed, and referred to clinicians would reduce the amount of strain on those practicing.  
 
 **Q2 (2 marks):** Based on `glimpse()` and the data dictionary above, what information about
 how these images were captured is **missing** that could matter for an analysis? Give two examples and say why each matters.
@@ -209,7 +209,7 @@ labels |>
 
 **Q3 (1 marks):** What sort of ML issues may arise with a dataset that has this sort of label/class balance?
 
->There is a class imbalance - meaning that the dataset might bias toward the majority - the healthy. Moreover; the class split is different in the training set vs valid tests that could shift the results. Moreover; typically this can be problematic in low samples sizes; which this likely is. However; pre-training helps reduce these issues. 
+>There is a class imbalance - meaning that the dataset might bias toward the majority - the healthy. Moreover; the class split is different in the training set vs valid tests that could shift the results. Typically this can be problematic in low samples sizes; which this likely is. However; pre-training helps reduce these issues. 
 
 ### 2.4 Look at the images
 
@@ -232,7 +232,7 @@ gridExtra::grid.arrange(grobs = plots, nrow = 2, ncol = 3)
 **Q4 (3 marks):** Looking at these images, identify **two** properties that vary between
 photographs of the same class that we may want to normalise/process before training?  Can you see any consistent differences between Grade 4 and Grade 0 photographs? (Rerun the code-block a few times to get different images).
 
->Looking at the images, we want to normally want to be consistent on orientation, and at least having left and right eyes differentiated. As it appears both the direction, and orientation varies between phtotos. In addition to this, Class 4 is much more opaque and cloudy - and textured for lack of a better word, then Class 0. With more blemishes of darker orange intensity. 
+>Looking at the images, we want to normally want to be consistent on orientation, and at least having left and right eyes differentiated. As it appears both the direction, and orientation varies between photos. In addition to this, Class 4 is much more opaque and cloudy - and textured for lack of a better word, then Class 0. With more blemishes of darker orange intensity. 
 
 ## 3 Pre-processing
 
@@ -312,7 +312,7 @@ the channel dimension `3` here? If, instead of CFP images, we were using a 3D MR
 
 **Q6 (1 marks):** If we didn't want to use pre-trained ImageNet networks then we would still probably want to normalise the intensities in our dataset.  What issue might we cause if we normalised using the mean and standard deviation of the pixel intensities across the *whole* dataset (i.e., train, test, and validate combined)?
 
->Across the whole dataset we would be mixing information from all sources, which would then mix the testing and training datasets information. I suspect you could do this on the train dataset, and then assign those values to the test and validate dataset. 
+>Across the whole dataset we would be mixing information from all sources, which would then mix the testing and training datasets information. I suspect you could do this on the train dataset, and then assign those values to the testing and validate dataset. 
 
 ## 4 A CNN from Scratch
 
@@ -466,7 +466,7 @@ train_transform <- function(path) {
 
 **Q8a (2 marks):** These augmentations have some real potential drawbacks especially with data from eyes! Explain why flipping an eye horizontally may be misleading in this context then copy the above code to create a new augmentation pipeline `train_transform_fixed` which removes the horizontal flip and adds a *small random rotation* (`transform_random_rotation(degrees = ...)`). (Hint: use `?transform_random_rotation` to figure out the parameters for this function).
 
->Eyes are chiral, and flipping and eye horizontally may cause issues, since the model might notices distinctions between these flips and extract the wrong information. 
+>Eyes are chiral, and flipping an eye horizontally may cause issues, since the model might notices distinctions between these flips and extract the wrong information. 
 
 ```{r q8-augment}
 ## Uncomment, complete the rotation, and rebuild the augmented training dataloader.
@@ -638,11 +638,9 @@ et al. reported one tuned for **high specificity** and one for **high sensitivit
 >Specificity
 >: Is the True Negative Rate. $$ \frac{TN}{FP +TN} $$
 
->In a clinical setting it is important to have a sensitive model, however; it is important to have a model that is discerning and is not selecting false postives so a high specificity is also key. 
+>In a clinical setting it is important to have a sensitive model, however; it is also important to have a model that is discerning and is not selecting false postives so a high specificity is also key. 
 >
->Ideally, you would want a high sensitivity and high specificity. However; in a clinical setting this is not aways possible in practice if you classify everything postitive depending on the class balance the specificy would decline, and vise versa. It is possible to have perfect senstivity by predicting everything postive, and zero specificity. 
-
-
+>Ideally, you would want a high sensitivity and high specificity. However; in a clinical setting this is not aways possible in practice. For instance, if you classify everything postitive depending on the class balance the specificy would decline, and vise versa. It is possible to have perfect senstivity by predicting everything postive, and zero specificity, again the oppisitive is true, with perfect specifcity and negligible senstivity.
 
 
 
@@ -662,14 +660,19 @@ Unfortunately, these sort of analysis methods proved a little too challenging to
 **Q11 (1 marks):** Why is an attribution/saliency map more convincing evidence than test
 accuracy/sensitivity/specificity alone when arguing a model is clinically trustworthy? Give one way a model could achieve high performance metrics for the *wrong* reason that an attribution map might expose
 
->If a model is highly performant because of the setting, for instance the sensor the reason for its positive results are faulty. For instance, in the class example if a model was trained to find tanks, but it was cloudy then the model accurate predicts there are no tanks - but for the wrong reasons. It is better to look at what feature attribute, and look at the attention of the model itself. These metric can be miss leading otherwise. 
+>If a model appears highly performant because of properties of the dataset or setting, it may be relying on spurious information rather than the features it was intended to use. For example, a common example discussed in class is a model trained to detect tanks. If all images containing tanks were taken on cloudy days while images without tanks were taken on sunny days, the model may achieve high accuracy by learning to distinguish weather conditions rather than the presence of tanks. Thus, the apparent performance is due to a confounding factor in the data rather than the intended task. To prevent these issues described above, it can be better to look at what features attribute to the results, and look at the attention of the model itself. These metric can be miss leading otherwise. 
 
 
 **Q12 (1 marks):** Gulshan et al. validated on **two** datasets, including the publicly
 available Messidor-2 (a *different* country, cameras and protocol). Why is this kind of
 *external* validation so much stronger evidence than a held-out split of the same data? 
 
->The is a lot diffrences in demographics, access to treatment and even imaging devices across countires or contients. By using a dataset from multiple location this reduces the likihood a model will perform well on in a specific area, but be undescerning in other populations. It makes for a most robust model and strong evidence that the model is accurately predicting well. 
+>Gulshan used two datasets that were from different continents. The dataset also relied on different imaging devices. By using a data set with multiple locations and settings this reduces the likelihood of overfitting on a particular setting. It suggests the model works across demographics and treatment settings. 
+
+>Other studies, tend to use a small subsection of training hospitals in a small region of a single country (typically the US) and use internal validation by holding out portions of the data using cross validation. Even though there is a data validation step with images that the model have not seen, it does nothing to quell the concern that the model only performs in the small pocket of the world the images come from.  The Gulshan et al. study diversified and so the evidence is stronger that their model learned how to correctly identify DR.
+
+
+
 
 ## 9 Reproducibility
 
