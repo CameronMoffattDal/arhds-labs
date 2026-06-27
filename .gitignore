@@ -57,3 +57,7 @@ rsconnect/
 
 lab1/lab1_medical_databases_files/
 data/cache/physionet_subsample_1.0.0.rds
+lab4/lab4_physiological_signals_afib_cache/*
+lab4/lab4_physiological_signals_afib_files/
+data/
+dr_fundus/
